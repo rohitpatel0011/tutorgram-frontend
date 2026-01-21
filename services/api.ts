@@ -3,9 +3,24 @@
 import { UserProfile } from "../types";
 
 // PRODUCTION SETUP:
-// We use process.env.VITE_API_URL or fallback to localhost.
+// 1. If running locally, it uses http://localhost:8080/api
+// 2. If deployed, set VITE_API_URL in your environment variables.
+// NOTE: We use import.meta.env.VITE_API_URL for Vite compatibility.
 
-const API_URL = process.env.VITE_API_URL || "http://localhost:8080/api";
+const getApiUrl = () => {
+  if (
+    typeof import.meta !== "undefined" &&
+    (import.meta as any).env &&
+    (import.meta as any).env.VITE_API_URL
+  ) {
+    return (import.meta as any).env.VITE_API_URL;
+  }
+  return "http://localhost:8080/api";
+};
+
+const API_URL = getApiUrl();
+
+console.log("🔗 API Connected to:", API_URL);
 
 export const api = {
   auth: {
@@ -20,13 +35,12 @@ export const api = {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Signup failed");
 
-        // Save token
         localStorage.setItem("token", data.token);
         return data.user;
       } catch (error) {
         console.error("Signup Error:", error);
         throw new Error(
-          "Could not connect to server. Ensure Backend is running.",
+          "Connection failed. Is the Backend Server (localhost:8080) running?",
         );
       }
     },
@@ -47,7 +61,9 @@ export const api = {
       } catch (error) {
         console.error("Login Error:", error);
         throw new Error(
-          "Could not connect to server. Ensure Backend is running.",
+          "Network Error: Could not connect to backend at " +
+            API_URL +
+            ". Ensure server is running.",
         );
       }
     },

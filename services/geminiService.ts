@@ -11,11 +11,6 @@ export const regenerateTopicContent = async (
   originalContent: string,
   userPrompt: string,
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    console.error("API_KEY is missing in environment variables.");
-    return "Error: API Key missing.";
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = GENERATION_TEMPLATE.replace("{{category}}", category)
@@ -26,7 +21,7 @@ export const regenerateTopicContent = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -44,7 +39,6 @@ export const regenerateTopicContent = async (
 export const generateTopicAudio = async (
   text: string,
 ): Promise<string | null> => {
-  if (!process.env.API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -92,7 +86,6 @@ const generateQuizInternal = async (
   contentContext: string,
   numQuestions: number,
 ): Promise<QuizData | null> => {
-  if (!process.env.API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Trim context to avoid token limits
@@ -124,7 +117,7 @@ const generateQuizInternal = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -151,8 +144,6 @@ export const generateTopicVideo = async (
   // For video generation (Veo), we rely on the user selecting their own key via the aistudio helper
   // if available, OR we fall back to the env key.
 
-  // NOTE: Creating specific instance inside call to support dynamic key switching if needed later
-  if (!process.env.API_KEY) return null;
   const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -186,12 +177,11 @@ export const generateTopicVideo = async (
 };
 
 export const generateMotivationalQuote = async (): Promise<string | null> => {
-  if (!process.env.API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents:
         "Generate a single, short, high-energy motivational quote for a programmer or student. Maximum 8 words. Uppercase. No quotes.",
       config: { temperature: 1.0 },
