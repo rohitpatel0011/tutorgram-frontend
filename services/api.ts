@@ -2,25 +2,8 @@
 
 import { UserProfile } from "../types";
 
-// PRODUCTION SETUP:
-// 1. If running locally, it uses http://localhost:8080/api
-// 2. If deployed, set VITE_API_URL in your environment variables.
-// NOTE: We use import.meta.env.VITE_API_URL for Vite compatibility.
-
-const getApiUrl = () => {
-  if (
-    typeof import.meta !== "undefined" &&
-    (import.meta as any).env &&
-    (import.meta as any).env.VITE_API_URL
-  ) {
-    return (import.meta as any).env.VITE_API_URL;
-  }
-  return false;
-};
-
-const API_URL = getApiUrl();
-
-console.log("🔗 API Connected to:", API_URL);
+// Use process.env for API URL
+const API_URL = process.env.VITE_API_URL || "http://localhost:8080/api";
 
 export const api = {
   auth: {
@@ -40,7 +23,7 @@ export const api = {
       } catch (error) {
         console.error("Signup Error:", error);
         throw new Error(
-          "Connection failed. Is the Backend Server (localhost:8080) running?",
+          "Connection failed. If using Render Free Tier, the server might be waking up. Please wait 1 minute and try again.",
         );
       }
     },
@@ -61,9 +44,7 @@ export const api = {
       } catch (error) {
         console.error("Login Error:", error);
         throw new Error(
-          "Network Error: Could not connect to backend at " +
-            API_URL +
-            ". Ensure server is running.",
+          "Connection failed. If using Render Free Tier, the server might be waking up. Please wait 1 minute and try again.",
         );
       }
     },
@@ -96,6 +77,11 @@ export const api = {
       userId: string,
       updates: Partial<UserProfile>,
     ): Promise<UserProfile> => {
+      // Guest mode local update
+      if (userId === "guest-123") {
+        return { ...updates } as UserProfile;
+      }
+
       const res = await fetch(`${API_URL}/user/update`, {
         method: "PUT",
         headers: {
@@ -113,12 +99,15 @@ export const api = {
         const data = await res.json();
         return Array.isArray(data) ? data : [];
       } catch (e) {
-        console.error("Failed to fetch leaderboard", e);
         return [];
       }
     },
 
     recordActivity: async (user: UserProfile): Promise<UserProfile> => {
+      if (user._id === "guest-123") {
+        return { ...user, streak: user.streak + 1 };
+      }
+
       const today = new Date().toISOString().split("T")[0];
       if (user.lastActiveDate === today) return user;
 

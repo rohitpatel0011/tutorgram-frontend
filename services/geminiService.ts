@@ -68,7 +68,6 @@ export const generateChapterQuiz = async (
   chapterTitle: string,
   contextData: string,
 ): Promise<QuizData | null> => {
-  // Module quizzes get 10 questions
   return generateQuizInternal(`Full Module: ${chapterTitle}`, contextData, 10);
 };
 
@@ -76,11 +75,9 @@ export const generateTopicQuiz = async (
   topicTitle: string,
   content: string,
 ): Promise<QuizData | null> => {
-  // Topic quizzes get 5 questions
   return generateQuizInternal(`Topic: ${topicTitle}`, content, 5);
 };
 
-// Shared helper
 const generateQuizInternal = async (
   titleContext: string,
   contentContext: string,
@@ -88,7 +85,6 @@ const generateQuizInternal = async (
 ): Promise<QuizData | null> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  // Trim context to avoid token limits
   const safeContext = contentContext.substring(0, 15000);
 
   const prompt = `
@@ -141,9 +137,6 @@ const generateQuizInternal = async (
 export const generateTopicVideo = async (
   topicTitle: string,
 ): Promise<string | null> => {
-  // For video generation (Veo), we rely on the user selecting their own key via the aistudio helper
-  // if available, OR we fall back to the env key.
-
   const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
