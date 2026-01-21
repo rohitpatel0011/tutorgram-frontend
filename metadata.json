@@ -1,0 +1,5 @@
+{
+  "name": "Tutorgram",
+  "description": "An AI-powered personalized learning app for Computer Science with daily tasks, dynamic content regeneration, and quizzes using the Gemini API.",
+  "requestFramePermissions": []
+}

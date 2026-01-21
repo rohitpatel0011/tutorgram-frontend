@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tutorgram - AI Learning Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Imported JetBrains Mono as the primary fallback for iA Writer Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              // Setting global sans stack to prioritize iA Writer Mono, then JetBrains Mono
+              sans: ['"iA Writer Mono"', '"JetBrains Mono"', 'monospace'],
+              mono: ['"iA Writer Mono"', '"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+               paper: '#ffffff',
+               ink: '#000000',
+               'pitch-black': '#050505',
+               'acid': '#ABFA00',
+               'acid-dark': '#8Ec700',
+               'platinum': '#EAEBEC'
+            },
+            boxShadow: {
+              'neo': '5px 5px 0px 0px #000000',
+              'neo-sm': '3px 3px 0px 0px #000000',
+              'neo-lg': '8px 8px 0px 0px #000000',
+              'neo-white': '4px 4px 0px 0px #ffffff',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --acid: #ABFA00;
+        --black: #000000;
+        --white: #ffffff;
+      }
+      body {
+        /* Global Font Application */
+        font-family: 'iA Writer Mono', 'JetBrains Mono', monospace;
+        background-color: white;
+      }
+
+      /* --- FIXED SPHERE GRID BACKGROUND --- */
+      .background-container {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        width: 100%;
+        height: 100vh;
+        background-color: #ffffff;
+        overflow: hidden;
+      }
+
+      .sphere-grid-background {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        /* Grid Pattern */
+        background-image:
+          linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px),
+          radial-gradient(circle at 50% 50%, rgba(171, 250, 0, 0.4) 0%, rgba(171, 250, 0, 0.1) 40%, transparent 80%);
+        background-size: 40px 40px, 40px 40px, 100% 100%;
+      }
+
+      /* Dark mode overrides for background */
+      .dark .background-container {
+        background-color: #050505;
+      }
+      .dark .sphere-grid-background {
+        background-image:
+          linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px),
+          radial-gradient(circle at 50% 50%, rgba(171, 250, 0, 0.15) 0%, rgba(171, 250, 0, 0.02) 40%, transparent 80%);
+      }
+
+      /* --- NEUBRUTALISM UTILS --- */
+      .neo-card {
+        background-color: white;
+        border: 3px solid black;
+        box-shadow: 6px 6px 0px 0px black;
+        border-radius: 12px;
+      }
+      .dark .neo-card {
+        background-color: #111;
+        border-color: #333;
+        box-shadow: 6px 6px 0px 0px #333;
+      }
+
+      /* --- INPUT STYLES --- */
+      .neo-input {
+        width: 100%;
+        background: var(--white);
+        border: 3px solid var(--black);
+        border-radius: 0.5rem;
+        padding: 0.85rem 1rem;
+        font-weight: 600;
+        outline: none;
+        box-shadow: 4px 4px 0px 0px var(--black);
+        transition: all 0.15s ease;
+      }
+      .neo-input:focus {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0px 0px var(--black);
+      }
+      .dark .neo-input {
+        background: #000;
+        color: white;
+        border-color: white;
+        box-shadow: 4px 4px 0px 0px white;
+      }
+      .dark .neo-input:focus {
+        box-shadow: 6px 6px 0px 0px white;
+      }
+      .dark .neo-input::placeholder {
+        color: #666;
+      }
+
+      .neo-label {
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.5rem;
+        display: block;
+        color: var(--black);
+      }
+      .dark .neo-label {
+        color: #aaa;
+      }
+
+      /* --- BUTTON STYLES --- */
+      .neo-btn {
+        background-color: var(--acid);
+        color: var(--black);
+        border: 2.5px solid var(--black);
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.1s;
+        box-shadow: 4px 4px 0px var(--black);
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      .neo-btn:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0px var(--black);
+      }
+      .neo-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px var(--black);
+      }
+
+      .dark .neo-btn {
+         box-shadow: 4px 4px 0px #ffffff;
+         border-color: #ffffff;
+      }
+      .dark .neo-btn:hover {
+        box-shadow: 6px 6px 0px #ffffff;
+      }
+
+      /* Markdown Styles */
+      .prose-custom {
+        color: #1a1a1a;
+      }
+      .dark .prose-custom {
+        color: #e5e5e5;
+      }
+      .prose-custom h1 { font-size: 2.5rem; font-weight: 900; margin-bottom: 0.75em; letter-spacing: -1px; }
+      .prose-custom h2 { font-size: 1.75rem; font-weight: 800; margin-top: 1.5em; margin-bottom: 0.5em; border-bottom: 3px solid #000; padding-bottom: 0.3em; }
+      .dark .prose-custom h2 { border-color: #333; }
+
+      .prose-custom h3 { font-size: 1.25rem; font-weight: 700; margin-top: 1.25em; margin-bottom: 0.5em; }
+
+      .prose-custom p { margin-bottom: 1.25em; line-height: 1.8; font-size: 1.05rem; font-weight: 400; }
+
+      .prose-custom ul { list-style-type: square; padding-left: 1.5em; margin-bottom: 1.25em; }
+      .prose-custom li { margin-bottom: 0.5em; font-weight: 500; }
+
+      .prose-custom pre {
+        background: #000;
+        color: #ABFA00;
+        padding: 1.5em;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin-top: 1.5em;
+        margin-bottom: 2em;
+        font-family: 'JetBrains Mono', monospace;
+        border: 3px solid #333;
+        box-shadow: 5px 5px 0px #333;
+      }
+      .dark .prose-custom pre {
+        border-color: #444;
+        box-shadow: 5px 5px 0px #000;
+      }
+
+      .prose-custom code {
+        font-family: 'JetBrains Mono', monospace;
+        background: #f3f4f6;
+        color: #000;
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: 700;
+        border: 1px solid #ddd;
+      }
+      .dark .prose-custom code {
+        background: #222;
+        color: #ABFA00;
+        border-color: #444;
+      }
+
+      .prose-custom pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        border: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+<link rel="icon" href="/src/favicon.ico" />
+
+</head>
+  <body class="bg-transparent text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <!-- Grid Background Implementation -->
+    <div class="background-container">
+      <div class="sphere-grid-background"></div>
+    </div>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
