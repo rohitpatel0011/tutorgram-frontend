@@ -15,7 +15,7 @@ const getApiUrl = () => {
   ) {
     return (import.meta as any).env.VITE_API_URL;
   }
-  return "http://localhost:8080/api";
+  return false;
 };
 
 const API_URL = getApiUrl();
