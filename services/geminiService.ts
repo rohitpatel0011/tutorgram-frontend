@@ -11,12 +11,12 @@ export const regenerateTopicContent = async (
   originalContent: string,
   userPrompt: string,
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
   if (!process.env.API_KEY) {
-    console.error("API Key is missing. Check .env file.");
-    return "Error: API Key is missing. Please check your environment configuration.";
+    console.error("API_KEY is missing in environment variables.");
+    return "Error: API Key missing.";
   }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = GENERATION_TEMPLATE.replace("{{category}}", category)
     .replace("{{chapter}}", chapter)
@@ -44,12 +44,8 @@ export const regenerateTopicContent = async (
 export const generateTopicAudio = async (
   text: string,
 ): Promise<string | null> => {
+  if (!process.env.API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  if (!process.env.API_KEY) {
-    console.error("API Key missing");
-    return null;
-  }
 
   try {
     const response = await ai.models.generateContent({
@@ -96,12 +92,8 @@ const generateQuizInternal = async (
   contentContext: string,
   numQuestions: number,
 ): Promise<QuizData | null> => {
+  if (!process.env.API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  if (!process.env.API_KEY) {
-    console.error("API Key missing");
-    return null;
-  }
 
   // Trim context to avoid token limits
   const safeContext = contentContext.substring(0, 15000);
@@ -159,9 +151,8 @@ export const generateTopicVideo = async (
   // For video generation (Veo), we rely on the user selecting their own key via the aistudio helper
   // if available, OR we fall back to the env key.
 
-  // Per guidelines, we must assume process.env.API_KEY is available and up to date.
-  // We create a new instance right before the call.
-
+  // NOTE: Creating specific instance inside call to support dynamic key switching if needed later
+  if (!process.env.API_KEY) return null;
   const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -194,19 +185,19 @@ export const generateTopicVideo = async (
   }
 };
 
-// export const generateMotivationalQuote = async (): Promise<string | null> => {
-//   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-//   if (!process.env.API_KEY) return null;
+export const generateMotivationalQuote = async (): Promise<string | null> => {
+  if (!process.env.API_KEY) return null;
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-//   try {
-//     const response = await ai.models.generateContent({
-//       model: "gemini-2.5-flash",
-//       contents:
-//         "Generate a single, short, high-energy motivational quote for a programmer or student. Maximum 8 words. Uppercase. No quotes.",
-//       config: { temperature: 1.0 },
-//     });
-//     return response.text ? response.text.trim() : null;
-//   } catch (e) {
-//     return null;
-//   }
-// };
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents:
+        "Generate a single, short, high-energy motivational quote for a programmer or student. Maximum 8 words. Uppercase. No quotes.",
+      config: { temperature: 1.0 },
+    });
+    return response.text ? response.text.trim() : null;
+  } catch (e) {
+    return null;
+  }
+};

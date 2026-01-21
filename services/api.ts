@@ -3,11 +3,9 @@
 import { UserProfile } from "../types";
 
 // PRODUCTION SETUP:
-// 1. If running locally, it uses http://localhost:8080/api
-// 2. If deployed, set API_URL in Vercel/Netlify environment variables to your Render Backend URL + /api
-// Example API_URL: https://tutorgram-backend.onrender.com/api
+// We use process.env.VITE_API_URL or fallback to localhost.
 
-const API_URL = process.env.API_URL || "http://localhost:8080/api";
+const API_URL = process.env.VITE_API_URL || "http://localhost:8080/api";
 
 export const api = {
   auth: {
