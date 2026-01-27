@@ -2,8 +2,8 @@
 
 import { UserProfile } from "../types";
 
-// Use process.env for API URL
-const API_URL = process.env.VITE_API_URL || "http://localhost:8080/api";
+// Hardcoded Render Backend URL as requested by user
+const API_URL = "https://tutorgram-backend.onrender.com/api";
 
 export const api = {
   auth: {
@@ -23,7 +23,7 @@ export const api = {
       } catch (error) {
         console.error("Signup Error:", error);
         throw new Error(
-          "Connection failed. If using Render Free Tier, the server might be waking up. Please wait 1 minute and try again.",
+          "Connection failed. The Render server might be sleeping (Free Tier). Please wait 60 seconds and try again.",
         );
       }
     },
@@ -44,7 +44,7 @@ export const api = {
       } catch (error) {
         console.error("Login Error:", error);
         throw new Error(
-          "Connection failed. If using Render Free Tier, the server might be waking up. Please wait 1 minute and try again.",
+          "Connection failed. The Render server might be sleeping (Free Tier). Please wait 60 seconds and try again.",
         );
       }
     },
@@ -77,11 +77,6 @@ export const api = {
       userId: string,
       updates: Partial<UserProfile>,
     ): Promise<UserProfile> => {
-      // Guest mode local update
-      if (userId === "guest-123") {
-        return { ...updates } as UserProfile;
-      }
-
       const res = await fetch(`${API_URL}/user/update`, {
         method: "PUT",
         headers: {
@@ -104,10 +99,6 @@ export const api = {
     },
 
     recordActivity: async (user: UserProfile): Promise<UserProfile> => {
-      if (user._id === "guest-123") {
-        return { ...user, streak: user.streak + 1 };
-      }
-
       const today = new Date().toISOString().split("T")[0];
       if (user.lastActiveDate === today) return user;
 

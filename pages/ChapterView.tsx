@@ -18,9 +18,9 @@ const ChapterView: React.FC<Props> = ({ activeChapter, completedTopics, onNaviga
            <p className="text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto text-lg font-bold leading-relaxed">
                Master this module by exploring the topics below. Complete the AI quiz at the end to earn XP.
            </p>
-           
+
            <div className="flex justify-center gap-4">
-               <button 
+               <button
                    onClick={() => onNavigate('topic', activeChapter.topics[0].id, activeChapter.id)}
                    className="px-8 py-4 bg-black dark:bg-white text-white dark:text-black font-black rounded-xl hover:scale-105 transition-all shadow-[6px_6px_0px_0px_#888] uppercase tracking-wider flex items-center gap-2"
                >
@@ -32,7 +32,7 @@ const ChapterView: React.FC<Props> = ({ activeChapter, completedTopics, onNaviga
        <h2 className="text-2xl font-black text-black dark:text-white mb-6 uppercase tracking-tight">Module Topics</h2>
        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-16">
            {activeChapter.topics.map((t: any, idx: number) => (
-                   <div 
+                   <div
                    key={t.id}
                    onClick={() => onNavigate('topic', t.id, activeChapter.id)}
                    className="bg-white dark:bg-zinc-900 p-6 rounded-xl border-2 border-black dark:border-zinc-600 hover:bg-acid dark:hover:bg-acid hover:border-black shadow-[4px_4px_0px_0px_#000] cursor-pointer transition-all group flex items-center"
@@ -63,8 +63,8 @@ const ChapterView: React.FC<Props> = ({ activeChapter, completedTopics, onNaviga
                        <p className="text-gray-400 font-medium">Take the comprehensive 10-question module quiz. <br/>Score 8/10 or higher to earn your XP badge.</p>
                    </div>
                </div>
-               
-               <button 
+
+               <button
                    onClick={() => onNavigate('module-quiz', undefined, activeChapter.id)}
                    className="px-10 py-4 bg-acid text-black font-black text-lg rounded-xl border-2 border-black hover:scale-105 hover:shadow-[0px_0px_20px_rgba(171,250,0,0.5)] transition-all uppercase tracking-widest shrink-0"
                >

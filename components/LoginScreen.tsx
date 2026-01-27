@@ -46,6 +46,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         onLogin(user);
       }
     } catch (err) {
+      console.error("Auth Error:", err);
       setError((err as Error).message);
     } finally {
       setIsLoading(false);
@@ -72,7 +73,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         {/* Form Card */}
         <div className="bg-white dark:bg-black border-4 border-black dark:border-white shadow-[10px_10px_0px_0px_#000] dark:shadow-[10px_10px_0px_0px_#fff] rounded-2xl p-8 relative">
           {/* Toggle Mode */}
-          <div className="flex gap-4 mb-10">
+          <div className="flex gap-4 mb-6">
             <button
               onClick={() => setMode("signup")}
               className={`flex-1 py-3 font-black text-sm uppercase tracking-wider border-2 rounded-lg transition-all
@@ -95,7 +96,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {mode === "signup" && (
               <div>
                 <label className="neo-label">Full Name</label>
@@ -138,8 +139,14 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 text-red-600 dark:text-red-400 font-bold text-sm rounded-lg flex items-center">
-                <span className="mr-2 text-xl"></span> {error}
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 text-red-600 dark:text-red-400 font-bold text-xs rounded-lg flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div className="flex flex-col">
+                  <span>{error}</span>
+                  <span className="font-normal opacity-70 mt-1">
+                    Free servers take 1-2 mins to wake up.
+                  </span>
+                </div>
               </div>
             )}
 
@@ -148,7 +155,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               disabled={isLoading}
               className="neo-btn w-full justify-center mt-2">
               {isLoading
-                ? "Processing..."
+                ? "Connecting..."
                 : mode === "signup"
                   ? "Create Account"
                   : "Access Dashboard"}
