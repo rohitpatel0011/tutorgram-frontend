@@ -1,7 +1,7 @@
 /** @format */
 
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, X, Video } from "lucide-react";
+import { Menu, X, Video, Flame } from "lucide-react";
 import { CONTENT_DATA } from "./constants";
 import { UserState, Task, QuizData, UserProfile } from "./types";
 import {
@@ -11,7 +11,6 @@ import {
   generateChapterQuiz,
 } from "./services/geminiService";
 import LoginScreen from "./components/LoginScreen";
-import { getInitialTasks } from "./services/mockDb";
 import { api } from "./services/api";
 
 // Page Imports
@@ -20,6 +19,90 @@ import Dashboard from "./pages/Dashboard";
 import TopicView from "./pages/TopicView";
 import ChapterView from "./pages/ChapterView";
 import QuizModal from "./components/QuizModal";
+
+// --- Helper: Dynamic Task Generation ---
+const generateTasksFromProfile = (user: UserProfile): Task[] => {
+  // 1. Find next uncompleted topic
+  let nextTopic = null;
+  let quizChapter = null;
+
+  // Flatten topics
+  for (const cat of CONTENT_DATA) {
+    for (const chap of cat.chapters) {
+      // Check if user has finished this chapter?
+      const allTopicsInChap = chap.topics.map(t => t.id);
+      const finishedChap = allTopicsInChap.every(tid =>
+        (user.completedTopics || []).includes(tid),
+      );
+
+      if (!finishedChap) {
+        // Find first uncompleted
+        const t = chap.topics.find(
+          top => !(user.completedTopics || []).includes(top.id),
+        );
+        if (t && !nextTopic) {
+          nextTopic = { ...t, chapterId: chap.id };
+        }
+      } else {
+        // If chapter finished, suggest quiz
+        if (!quizChapter) quizChapter = chap;
+      }
+    }
+  }
+
+  // Default Fallback
+  if (!nextTopic) {
+    // All done? Just pick first
+    const c = CONTENT_DATA[0].chapters[0];
+    nextTopic = { ...c.topics[0], chapterId: c.id };
+  }
+  if (!quizChapter) {
+    quizChapter = CONTENT_DATA[0].chapters[0];
+  }
+
+  // Random review topic
+  const completed = user.completedTopics || [];
+  let reviewTopicId =
+    completed.length > 0
+      ? completed[Math.floor(Math.random() * completed.length)]
+      : nextTopic.id;
+
+  let reviewTopicTitle = "C Basics";
+  // Find title
+  for (const cat of CONTENT_DATA) {
+    for (const ch of cat.chapters) {
+      const f = ch.topics.find(t => t.id === reviewTopicId);
+      if (f) reviewTopicTitle = f.title;
+    }
+  }
+
+  return [
+    {
+      id: `t-${Date.now()}-1`,
+      title: `Read: ${nextTopic.title}`,
+      completed: false,
+      type: "read",
+      targetId: nextTopic.id,
+      dueDate: "Today",
+    },
+    {
+      id: `t-${Date.now()}-2`,
+      title: `Review: ${reviewTopicTitle}`,
+      completed: false,
+      type: "regenerate",
+      targetId: reviewTopicId,
+      dueDate: "Today",
+    },
+    {
+      id: `t-${Date.now()}-3`,
+      title: `Quiz: ${quizChapter.title}`,
+      completed: false,
+      type: "quiz",
+      targetId: quizChapter.id,
+      dueDate: "Tomorrow",
+    },
+  ];
+};
 
 // --- Audio Logic Helper ---
 const playPCMAudio = async (base64Audio: string, onEnded: () => void) => {
@@ -91,6 +174,9 @@ export default function App() {
   const [isGeneratingModuleQuiz, setIsGeneratingModuleQuiz] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
+  // Streak Popup State
+  const [showStreakPopup, setShowStreakPopup] = useState(false);
+
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const activeChapter = CONTENT_DATA.flatMap(c => c.chapters).find(
@@ -112,10 +198,14 @@ export default function App() {
           const returningUser = await api.auth.getMe();
           if (returningUser) {
             setUser(returningUser);
-            setTasks(getInitialTasks());
+            setTasks(generateTasksFromProfile(returningUser));
             setCompletedTopics(returningUser.completedTopics || []);
             setQuizScores(returningUser.quizScores || {});
             api.user.getLeaderboard().then(setLeaderboard);
+
+            // Trigger Streak Popup on restore
+            setShowStreakPopup(true);
+            setTimeout(() => setShowStreakPopup(false), 2000);
           }
         } catch (e) {
           console.error("Session restore failed", e);
@@ -132,7 +222,7 @@ export default function App() {
 
   // Poll leaderboard
   useEffect(() => {
-    if (user) {
+    if (user && !user._id.startsWith("guest-")) {
       api.user.getLeaderboard().then(setLeaderboard);
     }
   }, [user?.xp]);
@@ -156,19 +246,90 @@ export default function App() {
 
   const handleLogin = (newUser: UserProfile) => {
     setUser(newUser);
-    setTasks(getInitialTasks()); // Keep mock tasks for daily variety, unrelated to DB persistence for now
+    setTasks(generateTasksFromProfile(newUser));
 
     // Load data from User Profile (API response)
     setCompletedTopics(newUser.completedTopics || []);
     setQuizScores(newUser.quizScores || {});
 
-    api.user.getLeaderboard().then(setLeaderboard);
+    // Only fetch leaderboard if not guest
+    if (!newUser._id.startsWith("guest-")) {
+      api.user.getLeaderboard().then(setLeaderboard);
+    }
+
+    // Trigger Streak Popup on explicit login
+    setShowStreakPopup(true);
+    setTimeout(() => setShowStreakPopup(false), 2000);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
     setActiveView("dashboard");
+  };
+
+  // --- Centralized Progress Sync Logic (Fixes Guest Error) ---
+  const syncUserProgress = async (
+    updates: Partial<UserProfile>,
+    checkStreak: boolean = false,
+  ) => {
+    if (!user) return;
+
+    // 1. Optimistic Local Update (Fast UI)
+    let nextUser = { ...user, ...updates };
+
+    // Simulate Streak Calculation Locally
+    if (checkStreak) {
+      const today = new Date().toISOString().split("T")[0];
+      if (nextUser.lastActiveDate !== today) {
+        const lastDate = new Date(nextUser.lastActiveDate);
+        const currDate = new Date(today);
+        const diffTime = Math.abs(currDate.getTime() - lastDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) nextUser.streak += 1;
+        else if (diffDays > 1) nextUser.streak = 1;
+
+        nextUser.lastActiveDate = today;
+        nextUser.totalLearningDays = (nextUser.totalLearningDays || 0) + 1;
+
+        // Add to activity history for graph
+        const history = [...(nextUser.activityHistory || [])];
+        if (!history.includes(today)) history.push(today);
+        nextUser.activityHistory = history;
+      }
+    }
+    setUser(nextUser);
+
+    // 2. Network Sync (Skip if Guest)
+    if (!user._id.startsWith("guest-")) {
+      try {
+        if (Object.keys(updates).length > 0) {
+          // Update backend data
+          const u1 = await api.user.update(user._id, updates);
+
+          // If activity recording is needed, chain it
+          if (checkStreak) {
+            const u2 = await api.user.recordActivity(u1);
+            setUser(u2);
+          } else {
+            setUser(u1);
+          }
+        } else if (checkStreak) {
+          // Just recording activity
+          const u2 = await api.user.recordActivity(user);
+          setUser(u2);
+        }
+        // Refresh leaderboard after updates
+        api.user.getLeaderboard().then(setLeaderboard);
+      } catch (e) {
+        console.warn(
+          "Background sync failed (Network Error). Kept local state.",
+          e,
+        );
+        // We do NOT revert state, ensuring offline/guest-like tolerance
+      }
+    }
   };
 
   // --- Logic for Starting Module Quiz ---
@@ -243,22 +404,13 @@ export default function App() {
     );
     if (catIdx === -1) return;
 
-    // Mark completed in Backend
+    // Mark completed
     if (!completedTopics.includes(activeTopicId)) {
       const newCompleted = [...completedTopics, activeTopicId];
       setCompletedTopics(newCompleted);
 
-      try {
-        // 1. Update completed topics
-        const updatedUser = await api.user.update(user._id, {
-          completedTopics: newCompleted,
-        });
-        // 2. Update Streak
-        const withStreak = await api.user.recordActivity(updatedUser);
-        setUser(withStreak);
-      } catch (e) {
-        console.error("Failed to sync progress", e);
-      }
+      // Use new sync method
+      syncUserProgress({ completedTopics: newCompleted }, true);
     }
 
     const ch = CONTENT_DATA[catIdx].chapters[chapIdx];
@@ -298,8 +450,7 @@ export default function App() {
 
     // Record activity for streak on task complete
     if (user) {
-      const updatedUser = await api.user.recordActivity(user);
-      setUser(updatedUser);
+      syncUserProgress({}, true);
     }
   };
 
@@ -418,32 +569,19 @@ export default function App() {
     const newScores = { ...quizScores, [activeTopicId]: score };
     setQuizScores(newScores);
 
-    // Update in Backend
-    try {
-      const updatedUser = await api.user.update(user._id, {
+    // Sync with centralized logic
+    syncUserProgress(
+      {
         quizScores: newScores,
         xp: user.xp + 5,
-      });
-      const withStreak = await api.user.recordActivity(updatedUser);
-      setUser(withStreak);
-      api.user.getLeaderboard().then(setLeaderboard);
-    } catch (e) {
-      console.error("Failed to update quiz score", e);
-    }
+      },
+      true,
+    );
   };
 
   const handleModuleQuizPass = async () => {
     if (!user) return;
-    try {
-      const updatedUser = await api.user.update(user._id, {
-        xp: user.xp + 100,
-      });
-      const withStreak = await api.user.recordActivity(updatedUser);
-      setUser(withStreak);
-      api.user.getLeaderboard().then(setLeaderboard);
-    } catch (e) {
-      console.error("Failed to update module completion", e);
-    }
+    syncUserProgress({ xp: user.xp + 100 }, true);
   };
 
   const passedQuizzesCount = Object.values(quizScores).filter(
@@ -470,9 +608,32 @@ export default function App() {
         />
       )}
 
+      {/* --- STREAK POPUP --- */}
+      {showStreakPopup && user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+          <div className="text-center p-8 bg-acid border-4 border-black shadow-[10px_10px_0px_0px_#fff] rounded-2xl transform rotate-2 max-w-sm w-full mx-4">
+            <Flame
+              size={64}
+              className="mx-auto mb-4 text-black animate-pulse"
+              fill="black"
+            />
+            <h2 className="text-5xl font-black text-black mb-2">
+              {user.streak} DAY
+            </h2>
+            <div className="text-xl font-bold bg-black text-white py-2 px-4 inline-block transform -rotate-2">
+              STREAK UNLOCKED!
+            </div>
+            <p className="mt-4 font-bold text-black uppercase tracking-widest text-xs">
+              Keep the fire burning!
+            </p>
+          </div>
+        </div>
+      )}
+
       <Sidebar
         isOpen={sidebarOpen}
         activeTopicId={activeTopicId}
+        activeChapterId={activeChapterId} // Passed activeChapterId prop
         activeView={activeView}
         user={user}
         theme={theme}
