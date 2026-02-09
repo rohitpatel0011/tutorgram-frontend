@@ -70,7 +70,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   const activeCategoryId = React.useMemo(() => {
-    // If on dashboard, do not highlight any curriculum category
     if (activeView === "dashboard") return null;
 
     // 1. Try finding by Active Topic
@@ -84,7 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
     }
 
-    // 2. Try finding by Active Chapter (Fix for Chapter View)
+    // 2. Try finding by Active Chapter
     if (activeChapterId) {
       for (const cat of CONTENT_DATA) {
         if (cat.chapters.some(c => c.id === activeChapterId)) {
@@ -109,7 +108,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           }
         }
         if (foundChapterId && foundCategoryId) {
-          setExpandedCategory(foundCategoryId);
+          // Only set expanding if null (don't override user manual toggles)
+          setExpandedCategory(prev =>
+            prev === foundCategoryId ? prev : foundCategoryId,
+          );
           setExpandedChapters(prev =>
             prev.includes(foundChapterId) ? prev : [...prev, foundChapterId],
           );
@@ -121,7 +123,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         prev.includes(activeChapterId) ? prev : [...prev, activeChapterId],
       );
 
-      // Expand Category too
       let foundCategoryId = "";
       for (const cat of CONTENT_DATA) {
         if (cat.chapters.some(c => c.id === activeChapterId)) {
@@ -134,26 +135,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [activeTopicId, activeChapterId, activeView]);
 
   const toggleCategory = (id: string) => {
-    if (isCollapsed) {
-      setIsCollapsed(false);
-      setExpandedCategory(id);
-      return;
-    }
     setExpandedCategory(prev => (prev === id ? null : id));
   };
 
-  // Updated Handler: Navigates to Chapter View AND Expands
   const handleChapterClick = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // Navigate to Chapter View (Module Overview)
     onNavigate("chapter", undefined, id);
-
-    // Ensure it is expanded so user sees topics
     setExpandedChapters(prev => {
-      if (!prev.includes(id)) return [...prev, id];
-      return prev;
+      if (prev.includes(id)) return prev.filter(c => c !== id); // Toggle off if clicked again
+      return [...prev, id];
     });
   };
 
@@ -199,7 +190,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 ${isOpen ? "translate-x-0 w-80" : "-translate-x-full"} ${widthClass} bg-white dark:bg-black border-r-4 border-black dark:border-zinc-800 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 flex flex-col`}>
-      {/* Collapse Button - ONLY visible on Large screens (lg:flex), hidden on mobile/tablet */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="hidden lg:flex absolute -right-4 top-8 bg-white dark:bg-black border-2 border-black dark:border-white w-8 h-8 items-center justify-center rounded-full z-50 hover:bg-acid shadow-[2px_2px_0px_0px_#000]">
@@ -210,7 +200,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </button>
 
-      {/* Branding Header - Clickable */}
       <div
         onClick={() => onNavigate("dashboard")}
         className={`h-24 flex items-center ${isCollapsed ? "justify-center px-0" : "px-6"} border-b-4 border-black dark:border-zinc-800 flex-shrink-0 bg-white dark:bg-black transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-900 group`}>
@@ -239,12 +228,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}>
           <Layout size={24} className={`${isCollapsed ? "" : "mr-3"}`} />
           {!isCollapsed && <span>DASHBOARD</span>}
-
-          {isCollapsed && (
-            <span className="absolute left-16 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-              Dashboard
-            </span>
-          )}
         </button>
 
         <div
@@ -304,12 +287,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <ChevronRight size={14} />
                           ))}
 
-                        {isCollapsed && (
-                          <span className="absolute left-14 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                            {category.title}
-                          </span>
-                        )}
-
                         {isActiveInCollapsed && (
                           <span className="absolute -top-1 -right-1 w-3 h-3 bg-acid rounded-full border border-black animate-pulse"></span>
                         )}
@@ -342,7 +319,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 <div
                                   key={chapter.id}
                                   className="bg-white dark:bg-zinc-900 rounded-lg border-2 border-black dark:border-zinc-700 overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] dark:shadow-none">
-                                  {/* Updated Chapter Header: WHOLE BOX CLICKABLE -> NAVIGATE & EXPAND */}
                                   <div
                                     onClick={e =>
                                       handleChapterClick(chapter.id, e)

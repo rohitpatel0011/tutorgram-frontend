@@ -1,7 +1,7 @@
 /** @format */
 
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, X, Video, Flame } from "lucide-react";
+import { Menu, X, Video, Flame, LogOut, AlertTriangle } from "lucide-react";
 import { CONTENT_DATA } from "./constants";
 import { UserState, Task, QuizData, UserProfile } from "./types";
 import {
@@ -162,6 +162,7 @@ export default function App() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // New state for logout modal
 
   // Video State
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
@@ -262,13 +263,18 @@ export default function App() {
     setTimeout(() => setShowStreakPopup(false), 2000);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
     setActiveView("dashboard");
+    setShowLogoutConfirm(false);
   };
 
-  // --- Centralized Progress Sync Logic (Fixes Guest Error) ---
+  // --- Centralized Progress Sync Logic ---
   const syncUserProgress = async (
     updates: Partial<UserProfile>,
     checkStreak: boolean = false,
@@ -327,13 +333,12 @@ export default function App() {
           "Background sync failed (Network Error). Kept local state.",
           e,
         );
-        // We do NOT revert state, ensuring offline/guest-like tolerance
       }
     }
   };
 
   // --- Logic for Starting Module Quiz ---
-  const startModuleQuiz = async (chapterId: string) => {
+  const startModuleQuiz = async (chapterId: string, bypassCache = false) => {
     const chapter = CONTENT_DATA.flatMap(c => c.chapters).find(
       c => c.id === chapterId,
     );
@@ -348,11 +353,18 @@ export default function App() {
         .map(t => `TOPIC: ${t.title}\nCONTENT:\n${t.content}`)
         .join("\n\n");
 
-      const data = await generateChapterQuiz(chapter.title, fullContext);
+      const data = await generateChapterQuiz(
+        chapter.title,
+        fullContext,
+        bypassCache,
+      );
       setModuleQuizData(data);
     } catch (e) {
       console.error("Failed to generate module quiz", e);
       setShowModuleQuiz(false);
+      alert(
+        "Quiz generation failed due to high AI demand. Please try again in a moment.",
+      );
     } finally {
       setIsGeneratingModuleQuiz(false);
     }
@@ -365,7 +377,8 @@ export default function App() {
   ) => {
     if (view === "module-quiz" && chapterId) {
       setActiveChapterId(chapterId);
-      startModuleQuiz(chapterId);
+      // Default start (use cache if available)
+      startModuleQuiz(chapterId, false);
       setActiveView("chapter");
       setSidebarOpen(false);
       return;
@@ -468,12 +481,14 @@ export default function App() {
     }
 
     try {
+      // Force fresh generation (bypassCache = true)
       const newContent = await regenerateTopicContent(
         categoryTitle,
         activeChapter.title,
         activeTopic.title,
         activeTopic.content,
         customPrompt || `Explain in Hinglish`,
+        true,
       );
 
       setAiOverrides(prev => ({
@@ -486,6 +501,9 @@ export default function App() {
       }));
     } catch (e) {
       console.error("Regeneration failed", e);
+      alert(
+        "AI Service is currently overloaded (503). Please try again in 1 minute.",
+      );
     } finally {
       setIsRegenerating(false);
     }
@@ -630,6 +648,38 @@ export default function App() {
         </div>
       )}
 
+      {/* --- LOGOUT MODAL --- */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md p-6 rounded-2xl border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#ABFA00] transform scale-100 transition-all">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-black dark:border-red-500">
+                <LogOut className="text-red-600 dark:text-red-400" size={24} />
+              </div>
+              <h3 className="text-2xl font-black text-black dark:text-white uppercase tracking-tighter">
+                Log Out?
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 font-bold mb-8">
+              You are about to end your session. Your current progress has been
+              saved.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-3 px-4 font-black text-black dark:text-white border-2 border-black dark:border-zinc-500 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors uppercase">
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 py-3 px-4 font-black text-white bg-black dark:bg-white dark:text-black border-2 border-black dark:border-white rounded-xl hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_#ABFA00] transition-all uppercase">
+                Confirm Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Sidebar
         isOpen={sidebarOpen}
         activeTopicId={activeTopicId}
@@ -639,7 +689,7 @@ export default function App() {
         theme={theme}
         onNavigate={handleNavigate}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
-        onLogout={handleLogout}
+        onLogout={handleLogoutClick} // Updated to open modal
         onThemeToggle={toggleTheme}
       />
 

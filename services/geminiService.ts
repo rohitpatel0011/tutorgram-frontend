@@ -36,13 +36,13 @@ const saveToCache = (key: string, data: any) => {
     );
   } catch (e) {
     console.warn("LocalStorage full, clearing old cache...");
-    localStorage.clear(); // Nuclear option for demo, better to use LRU in prod
+    localStorage.clear();
   }
 };
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Wrapper to handle 429 errors automatically
+// Wrapper to handle 429/503 errors automatically
 const callWithRetry = async <T>(
   fn: () => Promise<T>,
   retries = 3,
@@ -54,11 +54,14 @@ const callWithRetry = async <T>(
     // Check for Quota Exceeded (429) or Service Unavailable (503)
     const msg = error?.message || JSON.stringify(error);
     if (
-      (msg.includes("429") || msg.includes("Quota") || msg.includes("503")) &&
+      (msg.includes("429") ||
+        msg.includes("Quota") ||
+        msg.includes("503") ||
+        msg.includes("Overloaded")) &&
       retries > 0
     ) {
       console.warn(
-        `Quota hit! Retrying in ${delay / 1000}s... (${retries} left)`,
+        `AI Busy (Status 429/503). Retrying in ${delay / 1000}s... (${retries} left)`,
       );
       await wait(delay);
       return callWithRetry(fn, retries - 1, delay * 2); // Exponential backoff
@@ -75,10 +78,17 @@ export const regenerateTopicContent = async (
   topicHeading: string,
   originalContent: string,
   userPrompt: string,
+  bypassCache: boolean = false,
 ): Promise<string> => {
-  const cacheKey = `content_${topicHeading}_${userPrompt}`.replace(/\s+/g, "_");
-  const cached = getFromCache<string>(cacheKey);
-  if (cached) return cached;
+  // Include a random string in cache key if bypassing, effectively forcing a new key
+  const cacheSuffix = bypassCache ? `_${Date.now()}` : "";
+  const cacheKey =
+    `content_${topicHeading}_${userPrompt}${cacheSuffix}`.replace(/\s+/g, "_");
+
+  if (!bypassCache) {
+    const cached = getFromCache<string>(cacheKey);
+    if (cached) return cached;
+  }
 
   return callWithRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -89,11 +99,11 @@ export const regenerateTopicContent = async (
       .replace("{{user_prompt}}", userPrompt);
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash", // Using Stable Model
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
+        temperature: 0.8, // Slightly higher creativity for regeneration
       },
     });
 
@@ -106,8 +116,6 @@ export const regenerateTopicContent = async (
 export const generateTopicAudio = async (
   text: string,
 ): Promise<string | null> => {
-  // Audio is large, usually we don't cache base64 in localStorage heavily,
-  // but for short clips it's okay to avoid 429 on replay.
   const cacheKey = `audio_${text.substring(0, 20)}`;
   const cached = getFromCache<string>(cacheKey);
   if (cached) return cached;
@@ -137,24 +145,28 @@ export const generateTopicAudio = async (
 export const generateChapterQuiz = async (
   chapterTitle: string,
   contextData: string,
+  bypassCache: boolean = false,
 ): Promise<QuizData | null> => {
   return generateQuizInternal(
     `Full Module: ${chapterTitle}`,
     contextData,
     10,
     `quiz_chap_${chapterTitle}`,
+    bypassCache,
   );
 };
 
 export const generateTopicQuiz = async (
   topicTitle: string,
   content: string,
+  bypassCache: boolean = false,
 ): Promise<QuizData | null> => {
   return generateQuizInternal(
     `Topic: ${topicTitle}`,
     content,
     5,
     `quiz_topic_${topicTitle}`,
+    bypassCache,
   );
 };
 
@@ -162,13 +174,19 @@ const generateQuizInternal = async (
   titleContext: string,
   contentContext: string,
   numQuestions: number,
-  cacheKey: string,
+  baseCacheKey: string,
+  bypassCache: boolean,
 ): Promise<QuizData | null> => {
-  // Check Cache First
-  const cached = getFromCache<QuizData>(cacheKey);
-  if (cached) {
-    console.log("Serving Quiz from Cache");
-    return cached;
+  // If bypassing, append random suffix to key so we don't hit old cache,
+  // AND we save it as a new entry (or overwrite if we prefer, but unique keys are safer for history)
+  const cacheKey = bypassCache ? `${baseCacheKey}_${Date.now()}` : baseCacheKey;
+
+  if (!bypassCache) {
+    const cached = getFromCache<QuizData>(cacheKey);
+    if (cached) {
+      console.log("Serving Quiz from Cache");
+      return cached;
+    }
   }
 
   return callWithRetry(async () => {
@@ -200,10 +218,11 @@ const generateQuizInternal = async (
         `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        temperature: 0.9, // Higher temp for variety
       },
     });
 
@@ -216,7 +235,7 @@ const generateQuizInternal = async (
       questions: parsed.questions,
     };
 
-    saveToCache(cacheKey, result);
+    saveToCache(cacheKey, result); // Save new version
     return result;
   });
 };
@@ -224,7 +243,6 @@ const generateQuizInternal = async (
 export const generateTopicVideo = async (
   topicTitle: string,
 ): Promise<string | null> => {
-  // Video cannot be cached easily as URLs expire, so we just use Retry logic
   const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   return callWithRetry(async () => {
@@ -250,11 +268,10 @@ export const generateTopicVideo = async (
       return `${video.uri}&key=${process.env.API_KEY}`;
     }
     return null;
-  }, 1); // Less retries for video as it is heavy
+  }, 1);
 };
 
 export const generateMotivationalQuote = async (): Promise<string | null> => {
-  // Cache quotes aggressively (12 hours)
   const cacheKey = "daily_quote";
   const cached = getFromCache<string>(cacheKey);
   if (cached) return cached;
@@ -262,7 +279,7 @@ export const generateMotivationalQuote = async (): Promise<string | null> => {
   return callWithRetry(async () => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents:
         "Generate a single, short, high-energy motivational quote for a programmer or student. Maximum 8 words. Uppercase. No quotes.",
       config: { temperature: 1.0 },
