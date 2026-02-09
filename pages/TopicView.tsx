@@ -60,7 +60,7 @@ const TopicView: React.FC<Props> = ({
 }) => {
   const [showPromptInput, setShowPromptInput] = useState(false);
   const [promptText, setPromptText] = useState(
-    "Explain like I have VS Code open. Give me 5 practical examples and code snippets.",
+    "",
   );
   const [useHinglish, setUseHinglish] = useState(false);
 
