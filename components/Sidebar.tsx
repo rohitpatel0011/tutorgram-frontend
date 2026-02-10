@@ -6,28 +6,35 @@ import {
   ChevronDown,
   GraduationCap,
   Layout,
-  Globe,
-  Code,
-  Layers,
   LogOut,
   Sun,
   Moon,
   Flame,
-  Server,
-  Cpu,
-  Cloud,
-  Brain,
-  Terminal,
-  Code2,
-  Coffee,
-  BookOpen,
-  Calculator,
-  Network,
-  Database,
   PanelLeftClose,
   CheckCircle2,
   Trophy,
 } from "lucide-react";
+// Import Brand Icons
+import {
+  SiC,
+  SiCplusplus,
+  SiPython,
+  SiJavascript,
+  SiReact,
+  SiNodedotjs,
+  SiMysql,
+  SiOpenai,
+} from "react-icons/si";
+import {
+  FaJava,
+  FaMicrochip,
+  FaServer,
+  FaProjectDiagram,
+  FaCalculator,
+  FaLaptopCode,
+  FaAws,
+} from "react-icons/fa";
+
 import { UserProfile, Category, Chapter, Topic } from "../types";
 import { CONTENT_DATA } from "../constants";
 
@@ -69,32 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return groups;
   }, []);
 
-  const activeCategoryId = React.useMemo(() => {
-    if (activeView === "dashboard") return null;
-
-    // 1. Try finding by Active Topic
-    if (activeTopicId) {
-      for (const cat of CONTENT_DATA) {
-        for (const chap of cat.chapters) {
-          if (chap.topics.some(t => t.id === activeTopicId)) {
-            return cat.id;
-          }
-        }
-      }
-    }
-
-    // 2. Try finding by Active Chapter
-    if (activeChapterId) {
-      for (const cat of CONTENT_DATA) {
-        if (cat.chapters.some(c => c.id === activeChapterId)) {
-          return cat.id;
-        }
-      }
-    }
-
-    return null;
-  }, [activeTopicId, activeChapterId, activeView]);
-
+  // Auto-expand logic based on active content
   useEffect(() => {
     if (activeTopicId) {
       let foundChapterId = "";
@@ -108,21 +90,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           }
         }
         if (foundChapterId && foundCategoryId) {
-          // Only set expanding if null (don't override user manual toggles)
-          setExpandedCategory(prev =>
-            prev === foundCategoryId ? prev : foundCategoryId,
-          );
+          setExpandedCategory(foundCategoryId);
           setExpandedChapters(prev =>
             prev.includes(foundChapterId) ? prev : [...prev, foundChapterId],
           );
         }
       }
-    } else if (activeChapterId && activeView === "chapter") {
-      // Expand chapter if navigating to chapter view
+    } else if (activeChapterId) {
       setExpandedChapters(prev =>
         prev.includes(activeChapterId) ? prev : [...prev, activeChapterId],
       );
-
       let foundCategoryId = "";
       for (const cat of CONTENT_DATA) {
         if (cat.chapters.some(c => c.id === activeChapterId)) {
@@ -132,56 +109,73 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
       if (foundCategoryId) setExpandedCategory(foundCategoryId);
     }
-  }, [activeTopicId, activeChapterId, activeView]);
+  }, [activeTopicId, activeChapterId]);
 
   const toggleCategory = (id: string) => {
-    setExpandedCategory(prev => (prev === id ? null : id));
+    if (isCollapsed) {
+      const category = CONTENT_DATA.find(c => c.id === id);
+      if (category && category.chapters.length > 0) {
+        // In collapsed mode, clicking icon goes to first chapter
+        onNavigate("chapter", undefined, category.chapters[0].id);
+      }
+    } else {
+      setExpandedCategory(prev => (prev === id ? null : id));
+    }
   };
 
-  const handleChapterClick = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
+  const toggleChapterExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setExpandedChapters(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id],
+    );
+  };
+
+  const handleChapterNameClick = (id: string) => {
+    // 1. Navigate to Chapter View
     onNavigate("chapter", undefined, id);
-    setExpandedChapters(prev => {
-      if (prev.includes(id)) return prev.filter(c => c !== id); // Toggle off if clicked again
-      return [...prev, id];
-    });
+    // 2. Ensure it's expanded
+    setExpandedChapters(prev => (prev.includes(id) ? prev : [...prev, id]));
   };
 
   const getCategoryIcon = (id: string) => {
     switch (id) {
-      case "frontend-foundations":
-        return <Globe size={20} />;
-      case "react-ecosystem":
-        return <Code size={20} />;
-      case "nodejs-complete":
-        return <Server size={20} />;
       case "c-programming":
-        return <Terminal size={20} />;
+        return <SiC size={18} />;
       case "cpp-programming":
-        return <Code2 size={20} />;
+        return <SiCplusplus size={18} />;
       case "java-programming":
-        return <Coffee size={20} />;
-      case "cs-core-subjects":
-        return <BookOpen size={20} />;
-      case "cs-dsa":
-        return <Network size={20} />;
-      case "mysql-database":
-        return <Database size={20} />;
-      case "system-design":
-        return <Layers size={20} />;
+        return <FaJava size={20} />;
       case "python-mastery":
-        return <Code size={20} />;
-      case "eng-hardware":
-        return <Cpu size={20} />;
+        return <SiPython size={18} />;
+
+      case "frontend-foundations":
+        return <SiJavascript size={18} />;
+      case "react-ecosystem":
+        return <SiReact size={18} />;
+      case "nodejs-complete":
+        return <SiNodedotjs size={18} />;
+
+      case "mysql-database":
+        return <SiMysql size={20} />;
+
+      case "cs-core-subjects":
+        return <FaLaptopCode size={18} />;
+      case "cs-dsa":
+        return <FaProjectDiagram size={18} />;
+      case "system-design":
+        return <FaServer size={18} />;
       case "cs-math":
-        return <Calculator size={20} />;
+        return <FaCalculator size={18} />;
+
       case "cloud-computing":
-        return <Cloud size={20} />;
+        return <FaAws size={20} />;
       case "ai-ml":
-        return <Brain size={20} />;
+        return <SiOpenai size={18} />;
+      case "eng-hardware":
+        return <FaMicrochip size={18} />;
+
       default:
-        return <Layers size={20} />;
+        return <FaLaptopCode size={18} />;
     }
   };
 
@@ -190,6 +184,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 ${isOpen ? "translate-x-0 w-80" : "-translate-x-full"} ${widthClass} bg-white dark:bg-black border-r-4 border-black dark:border-zinc-800 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 flex flex-col`}>
+      {/* Collapse Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="hidden lg:flex absolute -right-4 top-8 bg-white dark:bg-black border-2 border-black dark:border-white w-8 h-8 items-center justify-center rounded-full z-50 hover:bg-acid shadow-[2px_2px_0px_0px_#000]">
@@ -200,6 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </button>
 
+      {/* Brand Header */}
       <div
         onClick={() => onNavigate("dashboard")}
         className={`h-24 flex items-center ${isCollapsed ? "justify-center px-0" : "px-6"} border-b-4 border-black dark:border-zinc-800 flex-shrink-0 bg-white dark:bg-black transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-900 group`}>
@@ -217,10 +213,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto py-6 space-y-1 custom-scrollbar bg-white dark:bg-black px-3">
+        {/* Dashboard Link */}
         <button
           onClick={() => onNavigate("dashboard")}
-          className={`w-full flex items-center ${isCollapsed ? "justify-center px-0 py-4" : "px-4 py-4"} text-sm font-bold rounded-xl border-2 transition-all mb-8 group relative
+          className={`w-full flex items-center ${isCollapsed ? "justify-center px-0 py-4" : "px-4 py-3"} text-sm font-bold rounded-xl border-2 transition-all mb-8 group relative
             ${
               activeView === "dashboard"
                 ? "bg-acid text-black border-black shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff] translate-x-[-2px] translate-y-[-2px]"
@@ -230,182 +228,178 @@ const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && <span>DASHBOARD</span>}
         </button>
 
+        {/* Divider */}
         <div
           className={`px-2 pb-4 flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
           {isCollapsed ? (
             <div className="h-0.5 w-full bg-gray-200 dark:bg-zinc-800"></div>
           ) : (
             <span className="text-xs font-black text-black dark:text-zinc-500 uppercase tracking-widest border-b-2 border-acid inline-block whitespace-nowrap">
-              My Curriculum
+              Curriculum
             </span>
           )}
         </div>
 
+        {/* Tree Structure */}
         <div className="space-y-6">
           {Object.entries(groupedContent).map(([groupName, categories]) => (
             <div key={groupName}>
               {!isCollapsed && (
-                <h3 className="px-2 mb-3 text-[10px] font-black uppercase text-gray-400 dark:text-zinc-600 tracking-wider flex items-center gap-2 truncate">
+                <h3 className="px-2 mb-2 text-[10px] font-black uppercase text-gray-400 dark:text-zinc-600 tracking-wider flex items-center gap-2 truncate pl-2">
                   {groupName}
                 </h3>
               )}
 
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {categories.map((category: Category) => {
                   const isCatExpanded = expandedCategory === category.id;
                   const isActiveInCollapsed =
-                    isCollapsed && activeCategoryId === category.id;
+                    isCollapsed &&
+                    activeChapterId &&
+                    category.chapters.some(c => c.id === activeChapterId);
+                  const isActiveCategory =
+                    activeChapterId &&
+                    category.chapters.some(c => c.id === activeChapterId);
 
                   return (
                     <div
                       key={category.id}
-                      className={`rounded-xl overflow-hidden ${isCollapsed ? "flex justify-center" : ""}`}>
+                      className={`${isCollapsed ? "flex justify-center mb-2" : "mb-1"}`}>
+                      {/* Category Header */}
                       <button
                         onClick={() => toggleCategory(category.id)}
-                        className={`flex items-center text-left transition-colors cursor-pointer rounded-lg relative group
+                        className={`flex items-center text-left transition-colors cursor-pointer relative group rounded-lg
                                             ${
                                               isCollapsed
-                                                ? `p-3 justify-center ${isActiveInCollapsed ? "bg-black dark:bg-white text-acid dark:text-black border-2 border-acid" : "hover:bg-gray-100 dark:hover:bg-zinc-900"}`
-                                                : `w-full justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-zinc-900 ${isCatExpanded ? "font-bold text-black dark:text-white" : "text-gray-600 dark:text-zinc-400"}`
+                                                ? `p-3 justify-center ${isActiveInCollapsed ? "bg-black dark:bg-white text-acid dark:text-black border-2 border-acid" : "hover:bg-gray-100 dark:hover:bg-zinc-900 border-2 border-transparent"}`
+                                                : `w-full justify-between px-2 py-2 ${isActiveCategory ? "text-black dark:text-white font-black" : "text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900 hover:text-black dark:hover:text-white"}`
                                             }
                                         `}>
                         <div className="flex items-center">
                           <span
-                            className={`opacity-100 ${isCollapsed ? "" : "mr-3 p-1.5 bg-black dark:bg-white text-acid dark:text-black rounded-md border border-black dark:border-transparent"}`}>
+                            className={`flex-shrink-0 transition-all ${isCollapsed ? "" : "mr-3"}`}>
                             {getCategoryIcon(category.id)}
                           </span>
                           {!isCollapsed && (
-                            <span className="text-sm font-bold tracking-tight">
+                            <span className="text-sm tracking-tight">
                               {category.title}
                             </span>
                           )}
                         </div>
-                        {!isCollapsed &&
-                          (isCatExpanded ? (
-                            <ChevronDown size={14} />
-                          ) : (
-                            <ChevronRight size={14} />
-                          ))}
 
-                        {isActiveInCollapsed && (
-                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-acid rounded-full border border-black animate-pulse"></span>
+                        {!isCollapsed && (
+                          <div className="flex items-center">
+                            {isCatExpanded ? (
+                              <ChevronDown size={14} />
+                            ) : (
+                              <ChevronRight size={14} />
+                            )}
+                          </div>
                         )}
                       </button>
 
-                      {!isCollapsed && (
-                        <div
-                          className={`transition-all duration-300 ease-in-out overflow-hidden ${isCatExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"}`}>
-                          <div className="px-3 pb-2 pt-2 space-y-3 pl-4 border-l-2 border-gray-100 dark:border-zinc-800 ml-4 my-2">
-                            {category.chapters.map((chapter: Chapter) => {
-                              const isChapExpanded = expandedChapters.includes(
-                                chapter.id,
-                              );
+                      {/* Chapters Tree */}
+                      {!isCollapsed && isCatExpanded && (
+                        <div className="ml-5 border-l-2 border-gray-200 dark:border-zinc-800 pl-2 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                          {category.chapters.map((chapter: Chapter) => {
+                            const isChapExpanded = expandedChapters.includes(
+                              chapter.id,
+                            );
+                            const isActiveChapter =
+                              activeChapterId === chapter.id ||
+                              chapter.topics.some(t => t.id === activeTopicId);
 
-                              const isActiveChapter =
-                                (activeChapterId &&
-                                  chapter.id === activeChapterId) ||
-                                chapter.topics.some(
-                                  t => t.id === activeTopicId,
-                                );
-
-                              const headerBaseClass =
-                                "w-full flex items-center justify-between px-3 py-3 text-xs font-bold transition-colors group cursor-pointer border-b-2 border-transparent";
-
-                              const headerColorClass = isActiveChapter
-                                ? "bg-acid text-black border-black"
-                                : "bg-white dark:bg-zinc-900 text-black dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800";
-
-                              return (
+                            return (
+                              <div key={chapter.id}>
+                                {/* Chapter Row */}
                                 <div
-                                  key={chapter.id}
-                                  className="bg-white dark:bg-zinc-900 rounded-lg border-2 border-black dark:border-zinc-700 overflow-hidden shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] dark:shadow-none">
-                                  <div
+                                  className={`flex items-center rounded-md transition-colors
+                                                                ${
+                                                                  isActiveChapter
+                                                                    ? "bg-gray-100 dark:bg-zinc-800"
+                                                                    : "hover:bg-gray-50 dark:hover:bg-zinc-900"
+                                                                }
+                                                            `}>
+                                  {/* Arrow Toggle */}
+                                  <button
                                     onClick={e =>
-                                      handleChapterClick(chapter.id, e)
+                                      toggleChapterExpand(chapter.id, e)
                                     }
-                                    className={`${headerBaseClass} ${headerColorClass}`}>
-                                    <div className="flex items-center truncate flex-1">
-                                      <div
-                                        className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 border border-black dark:border-zinc-500 ${isChapExpanded ? "bg-black dark:bg-white" : "bg-gray-300 dark:bg-zinc-600"}`}></div>
-                                      <span className="truncate uppercase tracking-wide">
-                                        {chapter.title}
-                                      </span>
-                                    </div>
+                                    className="p-1.5 text-gray-500 hover:text-black dark:hover:text-white">
+                                    {isChapExpanded ? (
+                                      <ChevronDown size={12} />
+                                    ) : (
+                                      <ChevronRight size={12} />
+                                    )}
+                                  </button>
 
-                                    <div className="p-1">
-                                      {isChapExpanded ? (
-                                        <ChevronDown size={12} />
-                                      ) : (
-                                        <ChevronRight size={12} />
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div
-                                    className={`transition-all duration-300 ease-in-out overflow-hidden bg-gray-50 dark:bg-black border-t-2 border-black dark:border-zinc-700 ${isChapExpanded ? "max-h-[3000px] opacity-100" : "max-h-0 opacity-0"}`}>
-                                    <div className="p-2 space-y-1">
-                                      {chapter.topics.map((topic: Topic) => {
-                                        const score =
-                                          user.quizScores?.[topic.id] || 0;
-                                        const isMastered = score >= 5;
-                                        const isActiveTopic =
-                                          activeTopicId === topic.id;
-
-                                        return (
-                                          <button
-                                            key={topic.id}
-                                            onClick={e => {
-                                              e.stopPropagation();
-                                              onNavigate(
-                                                "topic",
-                                                topic.id,
-                                                chapter.id,
-                                              );
-                                            }}
-                                            className={`w-full text-left px-3 py-2 text-[11px] font-semibold rounded-md transition-all flex items-center justify-between group
-                                                                        ${
-                                                                          isActiveTopic
-                                                                            ? "bg-black text-white dark:bg-white dark:text-black shadow-md"
-                                                                            : "text-gray-600 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-900 hover:border-black dark:hover:border-zinc-500 hover:text-black dark:hover:text-white border border-transparent"
-                                                                        }`}>
-                                            <span className="truncate pr-2">
-                                              {topic.title}
-                                            </span>
-
-                                            {isMastered && (
-                                              <div
-                                                className={`flex-shrink-0 ${isActiveTopic ? "text-acid" : "text-green-600 dark:text-green-400"}`}>
-                                                <Trophy
-                                                  size={12}
-                                                  fill="currentColor"
-                                                />
-                                              </div>
-                                            )}
-                                          </button>
-                                        );
-                                      })}
-                                      <button
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          onNavigate(
-                                            "module-quiz",
-                                            undefined,
-                                            chapter.id,
-                                          );
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-black dark:text-zinc-400 hover:bg-acid hover:text-black dark:hover:text-black rounded-md flex items-center mt-2 cursor-pointer border-t border-dashed border-gray-300 dark:border-zinc-800 pt-2">
-                                        <GraduationCap
-                                          size={12}
-                                          className="mr-1.5"
-                                        />{" "}
-                                        Final Module Exam
-                                      </button>
-                                    </div>
-                                  </div>
+                                  {/* Chapter Name (Navigates to Chapter View) */}
+                                  <button
+                                    onClick={() =>
+                                      handleChapterNameClick(chapter.id)
+                                    }
+                                    className={`flex-1 text-left py-1.5 pr-2 text-xs font-bold truncate ${isActiveChapter ? "text-black dark:text-white" : "text-gray-500 dark:text-zinc-500"}`}>
+                                    {chapter.title}
+                                  </button>
                                 </div>
-                              );
-                            })}
-                          </div>
+
+                                {/* Topics Tree */}
+                                {isChapExpanded && (
+                                  <div className="ml-2 pl-3 border-l-2 border-gray-100 dark:border-zinc-800 mt-1 mb-2 space-y-0.5">
+                                    {chapter.topics.map((topic: Topic) => {
+                                      const score =
+                                        user.quizScores?.[topic.id] || 0;
+                                      const isMastered = score >= 5;
+                                      const isActiveTopic =
+                                        activeTopicId === topic.id;
+
+                                      return (
+                                        <button
+                                          key={topic.id}
+                                          onClick={() =>
+                                            onNavigate(
+                                              "topic",
+                                              topic.id,
+                                              chapter.id,
+                                            )
+                                          }
+                                          className={`w-full text-left py-1.5 px-2 text-[11px] font-medium rounded-md transition-all flex items-center justify-between group
+                                                                                ${
+                                                                                  isActiveTopic
+                                                                                    ? "bg-acid text-black font-bold shadow-sm"
+                                                                                    : "text-gray-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                                                }
+                                                                            `}>
+                                          <span className="truncate">
+                                            {topic.title}
+                                          </span>
+                                          {isMastered && (
+                                            <CheckCircle2
+                                              size={10}
+                                              className="text-black dark:text-white"
+                                            />
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+
+                                    {/* Final Exam Link */}
+                                    <button
+                                      onClick={() =>
+                                        onNavigate(
+                                          "module-quiz",
+                                          undefined,
+                                          chapter.id,
+                                        )
+                                      }
+                                      className="w-full text-left py-1.5 px-2 text-[10px] font-bold text-acid-dark dark:text-acid hover:underline flex items-center gap-2 mt-1">
+                                      <Trophy size={10} /> Final Exam
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -417,6 +411,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      {/* Footer */}
       <div
         className={`border-t-4 border-black dark:border-zinc-800 bg-white dark:bg-black transition-all ${isCollapsed ? "p-2" : "p-4"}`}>
         <div

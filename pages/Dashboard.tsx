@@ -446,27 +446,27 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* --- SIDE COLUMN (Right 1/3) --- */}
         <div className="space-y-8">
-          {/* WEEKLY ACTIVITY */}
+          {/* 1. WEEKLY ACTIVITY */}
           <div className="bg-white dark:bg-zinc-900 border-4 border-black dark:border-zinc-700 rounded-2xl p-6 shadow-[6px_6px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_#555]">
             <h3 className="font-black text-lg text-black dark:text-white uppercase mb-4 flex items-center gap-2">
               <Activity size={20} /> Weekly Activity
             </h3>
-            <div className="flex justify-between items-end h-24 gap-2">
+            <div className="flex justify-between items-end h-32 gap-2">
               {last7Days.map((day, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col items-center gap-2 flex-1">
+                  className="flex flex-col items-center gap-2 flex-1 h-full justify-end">
                   <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-t-lg relative flex items-end overflow-hidden h-full">
                     <div
                       className={`w-full transition-all duration-500 ${day.isActive ? "bg-orange-500" : "bg-transparent"}`}
                       style={{
                         height: day.isActive
-                          ? `${50 + Math.random() * 50}%`
+                          ? `${40 + Math.random() * 60}%`
                           : "0%",
                       }}></div>
                   </div>
                   <span
-                    className={`text-[10px] font-black uppercase ${day.isActive ? "text-black dark:text-white" : "text-gray-300 dark:text-zinc-600"}`}>
+                    className={`text-[10px] font-black uppercase text-center w-full ${day.isActive ? "text-black dark:text-white" : "text-gray-300 dark:text-zinc-600"}`}>
                     {day.label}
                   </span>
                 </div>

@@ -190,6 +190,20 @@ export default function App() {
       ? aiOverrides[activeTopicId]
       : null;
 
+  // Function to handle Streak Popup Logic
+  const triggerStreakPopup = () => {
+    const today = new Date().toISOString().split("T")[0];
+    const storageKey = "tutorgram_streak_shown_date";
+    const lastShown = sessionStorage.getItem(storageKey);
+
+    // Only show if NOT shown in this session for today
+    if (lastShown !== today) {
+      setShowStreakPopup(true);
+      sessionStorage.setItem(storageKey, today);
+      setTimeout(() => setShowStreakPopup(false), 3000);
+    }
+  };
+
   // Initialization & Session Restore
   useEffect(() => {
     const initSession = async () => {
@@ -204,9 +218,8 @@ export default function App() {
             setQuizScores(returningUser.quizScores || {});
             api.user.getLeaderboard().then(setLeaderboard);
 
-            // Trigger Streak Popup on restore
-            setShowStreakPopup(true);
-            setTimeout(() => setShowStreakPopup(false), 2000);
+            // Trigger Streak Popup on restore (if not already shown)
+            triggerStreakPopup();
           }
         } catch (e) {
           console.error("Session restore failed", e);
@@ -258,9 +271,13 @@ export default function App() {
       api.user.getLeaderboard().then(setLeaderboard);
     }
 
-    // Trigger Streak Popup on explicit login
+    // Trigger Streak Popup on explicit login (always show on explicit login)
     setShowStreakPopup(true);
-    setTimeout(() => setShowStreakPopup(false), 2000);
+    sessionStorage.setItem(
+      "tutorgram_streak_shown_date",
+      new Date().toISOString().split("T")[0],
+    );
+    setTimeout(() => setShowStreakPopup(false), 3000);
   };
 
   const handleLogoutClick = () => {
@@ -269,6 +286,7 @@ export default function App() {
 
   const confirmLogout = () => {
     localStorage.removeItem("token");
+    sessionStorage.removeItem("tutorgram_streak_shown_date"); // Clear streak flag on logout
     setUser(null);
     setActiveView("dashboard");
     setShowLogoutConfirm(false);
@@ -293,8 +311,12 @@ export default function App() {
         const diffTime = Math.abs(currDate.getTime() - lastDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 1) nextUser.streak += 1;
-        else if (diffDays > 1) nextUser.streak = 1;
+        if (diffDays === 1) {
+          nextUser.streak += 1;
+          // Force show popup if streak increased
+          setShowStreakPopup(true);
+          setTimeout(() => setShowStreakPopup(false), 3000);
+        } else if (diffDays > 1) nextUser.streak = 1;
 
         nextUser.lastActiveDate = today;
         nextUser.totalLearningDays = (nextUser.totalLearningDays || 0) + 1;
@@ -694,24 +716,30 @@ export default function App() {
       />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="md:hidden h-16 bg-white dark:bg-near-black border-b border-slate-200 dark:border-dark-border flex items-center px-4 flex-shrink-0 justify-between">
+        {/* Mobile Header - Fully Fixed */}
+        <div className="md:hidden h-16 bg-white dark:bg-black border-b-4 border-black dark:border-zinc-800 flex items-center px-4 flex-shrink-0 justify-between sticky top-0 z-20 transition-colors duration-300">
           <div className="flex items-center">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-slate-600 dark:text-slate-400 mr-3">
+              className="text-black dark:text-white mr-3 hover:bg-gray-100 dark:hover:bg-zinc-800 p-1 rounded-md transition-colors">
               <Menu size={24} />
             </button>
-            <span className="font-bold text-lg text-indigo-900 dark:text-indigo-400">
+            <span className="font-black text-lg text-black dark:text-white uppercase tracking-tighter">
               Tutorgram
             </span>
           </div>
-          <img
-            src={user.avatarUrl}
-            className="w-8 h-8 rounded-full bg-indigo-100"
-          />
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-black bg-acid text-black px-2 py-1 rounded border border-black">
+              {user.xp} XP
+            </span>
+            <img
+              src={user.avatarUrl}
+              className="w-8 h-8 rounded-full border-2 border-black bg-gray-200"
+            />
+          </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto scroll-smooth">
+        <main className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
           {activeView === "dashboard" && (
             <Dashboard
               tasks={tasks}
