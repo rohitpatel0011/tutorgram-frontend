@@ -139,6 +139,14 @@ const playPCMAudio = async (base64Audio: string, onEnded: () => void) => {
   }
 };
 
+// Helper to get local date string YYYY-MM-DD
+const getLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // --- Main App Logic ---
 
 export default function App() {
@@ -190,9 +198,9 @@ export default function App() {
       ? aiOverrides[activeTopicId]
       : null;
 
-  // Function to handle Streak Popup Logic
+  // Function to handle Streak Popup Logic (Initial Check)
   const triggerStreakPopup = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString(new Date()); // Use local date
     const storageKey = "tutorgram_streak_shown_date";
     const lastShown = sessionStorage.getItem(storageKey);
 
@@ -275,7 +283,7 @@ export default function App() {
     setShowStreakPopup(true);
     sessionStorage.setItem(
       "tutorgram_streak_shown_date",
-      new Date().toISOString().split("T")[0],
+      getLocalDateString(new Date()),
     );
     setTimeout(() => setShowStreakPopup(false), 3000);
   };
@@ -304,7 +312,7 @@ export default function App() {
 
     // Simulate Streak Calculation Locally
     if (checkStreak) {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString(new Date()); // Local Date
       if (nextUser.lastActiveDate !== today) {
         const lastDate = new Date(nextUser.lastActiveDate);
         const currDate = new Date(today);
@@ -313,9 +321,14 @@ export default function App() {
 
         if (diffDays === 1) {
           nextUser.streak += 1;
-          // Force show popup if streak increased
-          setShowStreakPopup(true);
-          setTimeout(() => setShowStreakPopup(false), 3000);
+
+          // FIX: Check session storage to prevent duplicate popups for the same day
+          const storageKey = "tutorgram_streak_shown_date";
+          if (sessionStorage.getItem(storageKey) !== today) {
+            setShowStreakPopup(true);
+            sessionStorage.setItem(storageKey, today);
+            setTimeout(() => setShowStreakPopup(false), 3000);
+          }
         } else if (diffDays > 1) nextUser.streak = 1;
 
         nextUser.lastActiveDate = today;
@@ -392,6 +405,16 @@ export default function App() {
     }
   };
 
+  // --- Logic for Random "Brain Workout" Quiz ---
+  const startRandomQuiz = async () => {
+    // Pick a random chapter from any category
+    const allChapters = CONTENT_DATA.flatMap(c => c.chapters);
+    const randomChapter =
+      allChapters[Math.floor(Math.random() * allChapters.length)];
+
+    startModuleQuiz(randomChapter.id, false); // Reuse the module quiz logic
+  };
+
   const handleNavigate = (
     view: string,
     topicId?: string,
@@ -421,6 +444,16 @@ export default function App() {
     if (window.innerWidth < 768) window.scrollTo(0, 0);
   };
 
+  // NEW: Dedicated function to mark topic complete (Called by "Finish Module" button)
+  const handleTopicComplete = async (topicId: string) => {
+    if (!user) return;
+    if (!completedTopics.includes(topicId)) {
+      const newCompleted = [...completedTopics, topicId];
+      setCompletedTopics(newCompleted);
+      syncUserProgress({ completedTopics: newCompleted }, true);
+    }
+  };
+
   const handleNextTopic = async () => {
     if (!activeTopicId || !activeChapterId || !user) return;
     let catIdx = -1,
@@ -439,14 +472,8 @@ export default function App() {
     );
     if (catIdx === -1) return;
 
-    // Mark completed
-    if (!completedTopics.includes(activeTopicId)) {
-      const newCompleted = [...completedTopics, activeTopicId];
-      setCompletedTopics(newCompleted);
-
-      // Use new sync method
-      syncUserProgress({ completedTopics: newCompleted }, true);
-    }
+    // Use the helper to mark current as complete
+    handleTopicComplete(activeTopicId);
 
     const ch = CONTENT_DATA[catIdx].chapters[chapIdx];
     if (topIdx < ch.topics.length - 1) {
@@ -749,6 +776,7 @@ export default function App() {
               leaderboard={leaderboard}
               onTaskComplete={toggleTask}
               onNavigate={handleNavigate}
+              onStartRandomQuiz={startRandomQuiz} // NEW PROP
             />
           )}
 
@@ -771,6 +799,7 @@ export default function App() {
               onNavigate={handleNavigate}
               handlePrevTopic={handlePrevTopic}
               handleNextTopic={handleNextTopic}
+              handleTopicComplete={handleTopicComplete} // PASS NEW FUNCTION
               handleTopicQuizPass={handleTopicQuizPass}
               onRegenerate={handleRegenerate}
               onGenerateVideo={handleWatchExplanation}
@@ -821,9 +850,9 @@ export default function App() {
         onClose={() => setShowModuleQuiz(false)}
         quizData={moduleQuizData}
         loading={isGeneratingModuleQuiz}
-        title="Final Module Exam"
-        xpReward={100}
-        passingScore={8}
+        title="Random Brain Workout"
+        xpReward={150}
+        passingScore={5}
         onPass={handleModuleQuizPass}
       />
     </div>

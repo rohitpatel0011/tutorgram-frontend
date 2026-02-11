@@ -5,11 +5,12 @@ import {
   Brain,
   CheckCircle,
   XCircle,
-  AlertCircle,
   RefreshCw,
   Trophy,
   ArrowRight,
   Shuffle,
+  Code2,
+  AlertTriangle,
 } from "lucide-react";
 import { generateTopicQuiz } from "../services/geminiService";
 import { QuizData } from "../types";
@@ -82,11 +83,29 @@ const TopicQuiz: React.FC<Props> = ({
     }
   };
 
+  // Helper to render text that might contain markdown code blocks
+  const renderQuestionText = (text: string) => {
+    const parts = text.split(/(```[\s\S]*?```)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("```")) {
+        const code = part.replace(/```[a-z]*\n?/, "").replace(/```$/, "");
+        return (
+          <pre
+            key={i}
+            className="my-3 p-3 bg-black text-acid-dark rounded-lg overflow-x-auto text-sm font-mono border-2 border-gray-800 shadow-inner">
+            <code>{code}</code>
+          </pre>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   if (minimized) {
     return (
       <div className="mt-12 border-4 border-green-500 bg-green-50 dark:bg-green-900/10 rounded-xl p-6 flex items-center justify-between shadow-[6px_6px_0px_0px_#166534]">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-green-500 rounded-lg border-2 border-black flex items-center justify-center text-black">
+          <div className="w-14 h-14 bg-green-500 rounded-lg border-2 border-black flex items-center justify-center text-black shadow-[2px_2px_0px_0px_#000]">
             <Trophy size={28} />
           </div>
           <div>
@@ -139,10 +158,10 @@ const TopicQuiz: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="p-8 md:p-10">
+      <div className="p-6 md:p-10">
         {loading && (
           <div className="text-center py-10">
-            <div className="animate-spin w-12 h-12 border-4 border-black dark:border-white border-t-transparent rounded-full mx-auto mb-6"></div>
+            <div className="animate-spin w-12 h-12 border-4 border-black dark:border-white border-t-acid rounded-full mx-auto mb-6"></div>
             <p className="font-bold text-black dark:text-white text-lg">
               Brewing fresh questions...
             </p>
@@ -150,32 +169,38 @@ const TopicQuiz: React.FC<Props> = ({
         )}
 
         {!quizData && !loading && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-medium">
-            Ready? Click "Start Quiz" to generate 5 challenging questions.
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400 font-medium flex flex-col items-center">
+            <div className="bg-gray-100 dark:bg-zinc-800 p-4 rounded-full mb-4">
+              <Code2 size={32} className="text-gray-400" />
+            </div>
+            Ready? Click "Start Quiz" to generate 5 challenging, code-focused
+            questions.
           </div>
         )}
 
         {quizData && !showResult && (
           <div className="max-w-3xl mx-auto">
             {/* Progress Bar */}
-            <div className="flex items-center gap-4 mb-10">
-              <span className="font-black text-black dark:text-white">
+            <div className="flex items-center gap-4 mb-8">
+              <span className="font-black text-black dark:text-white text-xs bg-acid px-2 py-1 rounded border border-black">
                 Q{currentQIndex + 1}/5
               </span>
-              <div className="flex-1 h-4 bg-gray-200 dark:bg-zinc-800 rounded-full border-2 border-black dark:border-zinc-600 overflow-hidden">
+              <div className="flex-1 h-3 bg-gray-200 dark:bg-zinc-800 rounded-full border-2 border-black dark:border-zinc-600 overflow-hidden">
                 <div
-                  className="h-full bg-acid border-r-2 border-black"
+                  className="h-full bg-black dark:bg-white"
                   style={{
                     width: `${((currentQIndex + 1) / 5) * 100}%`,
                   }}></div>
               </div>
             </div>
 
-            <h4 className="text-2xl font-black text-black dark:text-white mb-8 leading-snug">
-              {quizData.questions[currentQIndex].question}
-            </h4>
+            <div className="mb-8">
+              <h4 className="text-xl md:text-2xl font-black text-black dark:text-white leading-relaxed">
+                {renderQuestionText(quizData.questions[currentQIndex].question)}
+              </h4>
+            </div>
 
-            <div className="space-y-4 mb-10">
+            <div className="space-y-3 mb-8">
               {quizData.questions[currentQIndex].options.map((opt, idx) => {
                 let statusClass =
                   "border-black dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:shadow-[4px_4px_0px_0px_#000] dark:hover:shadow-[4px_4px_0px_0px_#fff]";
@@ -198,21 +223,31 @@ const TopicQuiz: React.FC<Props> = ({
                   }
                 } else if (selectedOption === idx) {
                   statusClass =
-                    "bg-acid border-black shadow-[4px_4px_0px_0px_#000] text-black font-bold";
+                    "bg-black text-white dark:bg-white dark:text-black border-black shadow-[4px_4px_0px_0px_#acid]";
                 }
+
+                // Check if option is code-like
+                const isCodeOption =
+                  opt.includes("(") ||
+                  opt.includes(";") ||
+                  opt.includes("{") ||
+                  opt.includes("==");
 
                 return (
                   <button
                     key={idx}
                     onClick={() => handleOptionSelect(idx)}
                     disabled={isSubmitted}
-                    className={`w-full text-left p-5 rounded-lg border-2 transition-all flex items-center justify-between group ${statusClass} dark:text-white`}>
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-all flex items-center justify-between group ${statusClass}`}>
                     <div className="flex items-center gap-4">
                       <span
-                        className={`w-8 h-8 rounded-md border-2 border-black dark:border-zinc-400 flex items-center justify-center text-sm font-black ${selectedOption === idx ? "bg-black text-white" : "bg-white dark:bg-black text-black dark:text-white"}`}>
+                        className={`w-8 h-8 rounded-md border-2 border-current flex items-center justify-center text-sm font-black flex-shrink-0`}>
                         {String.fromCharCode(65 + idx)}
                       </span>
-                      <span className="font-semibold text-lg">{opt}</span>
+                      <span
+                        className={`font-semibold text-base ${isCodeOption ? "font-mono text-sm" : ""}`}>
+                        {opt}
+                      </span>
                     </div>
                     {icon}
                   </button>
@@ -239,7 +274,7 @@ const TopicQuiz: React.FC<Props> = ({
             </div>
 
             {isSubmitted && (
-              <div className="mt-6 p-5 bg-blue-50 dark:bg-zinc-900 border-l-4 border-blue-500 rounded-r-lg text-blue-900 dark:text-blue-100">
+              <div className="mt-6 p-5 bg-blue-50 dark:bg-zinc-900 border-l-4 border-blue-500 rounded-r-lg text-blue-900 dark:text-blue-100 animate-in fade-in slide-in-from-top-2">
                 <strong className="block uppercase text-xs font-black tracking-widest mb-1 text-blue-500">
                   Explanation
                 </strong>

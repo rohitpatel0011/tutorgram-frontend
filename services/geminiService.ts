@@ -194,24 +194,30 @@ const generateQuizInternal = async (
     const safeContext = contentContext.substring(0, 15000);
 
     const prompt = `
+        Act as a Senior Computer Science Exam Setter.
         Generate a quiz for: "${titleContext}".
 
-        Source Material:
+        Source Material Context:
         ${safeContext}
 
         Create exactly ${numQuestions} Multiple Choice Questions (MCQs).
-        Difficulty: Intermediate.
 
-        OUTPUT MUST BE STRICT RAW JSON ONLY. NO MARKDOWN.
+        STRICT RULES:
+        1. **Simple English**: Use very simple, clear English suitable for beginners.
+        2. **Code Snippets**: For programming topics (C, C++, Python, JS, etc.), AT LEAST 50% of questions MUST include a small code snippet to analyze (e.g., "What is the output?", "Find the error").
+        3. **Format Code**: Wrap code in the 'question' field using markdown code blocks (e.g., \`\`\`c ... \`\`\`).
+        4. **Variety**: Mix conceptual questions and practical debugging/output questions.
+
+        OUTPUT MUST BE STRICT RAW JSON ONLY. NO MARKDOWN OUTSIDE THE JSON.
         Structure:
         {
           "questions": [
             {
               "id": 1,
-              "question": "Question text",
+              "question": "Question text here (can include markdown code)",
               "options": ["Option A", "Option B", "Option C", "Option D"],
               "correctAnswerIndex": 0, // 0-3 integer
-              "explanation": "Why this is correct"
+              "explanation": "Simple explanation of why."
             }
           ]
         }
