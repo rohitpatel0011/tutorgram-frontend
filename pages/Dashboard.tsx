@@ -12,6 +12,7 @@ import {
   FaPlay,
   FaRegCalendarCheck,
   FaLayerGroup,
+  FaHandSparkles,
 } from "react-icons/fa";
 import { GoGraph } from "react-icons/go";
 import { BookOpen, Star, Brain } from "lucide-react";
@@ -340,7 +341,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <header className="mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="flex-1">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black dark:text-white tracking-tighter flex items-center gap-3 mb-2 flex-wrap">
-            <span className="text-4xl md:text-5xl animate-bounce">👋</span>
+            <FaHandSparkles className="text-4xl md:text-5xl text-yellow-400 animate-pulse" />
             WELCOME BACK,{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-acid-dark to-acid">
               {user.name.split(" ")[0].toUpperCase()}

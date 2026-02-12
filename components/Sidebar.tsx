@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import {
   ChevronRight,
   ChevronDown,
-  GraduationCap,
   Layout,
   LogOut,
   Sun,
@@ -33,6 +32,7 @@ import {
   FaCalculator,
   FaLaptopCode,
   FaAws,
+  FaSlackHash,
 } from "react-icons/fa";
 
 import { UserProfile, Category, Chapter, Topic } from "../types";
@@ -184,10 +184,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 ${isOpen ? "translate-x-0 w-80" : "-translate-x-full"} ${widthClass} bg-white dark:bg-black border-r-4 border-black dark:border-zinc-800 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 flex flex-col`}>
-      {/* Collapse Button */}
+      {/* Collapse Button - VISIBLE ON TABLET (MD) AND UP */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="hidden lg:flex absolute -right-4 top-8 bg-white dark:bg-black border-2 border-black dark:border-white w-8 h-8 items-center justify-center rounded-full z-50 hover:bg-acid shadow-[2px_2px_0px_0px_#000]">
+        className="hidden md:flex absolute -right-4 top-8 bg-white dark:bg-black border-2 border-black dark:border-white w-8 h-8 items-center justify-center rounded-full z-50 hover:bg-acid shadow-[2px_2px_0px_0px_#000]">
         {isCollapsed ? (
           <ChevronRight size={16} className="text-black dark:text-white" />
         ) : (
@@ -200,7 +200,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClick={() => onNavigate("dashboard")}
         className={`h-24 flex items-center ${isCollapsed ? "justify-center px-0" : "px-6"} border-b-4 border-black dark:border-zinc-800 flex-shrink-0 bg-white dark:bg-black transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-900 group`}>
         <div className="w-12 h-12 bg-acid border-2 border-black rounded-lg flex items-center justify-center shadow-[3px_3px_0px_0px_#000] dark:shadow-[3px_3px_0px_0px_#fff] shrink-0 group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-hover:shadow-none transition-all">
-          <GraduationCap className="text-black" size={24} />
+          <FaSlackHash className="text-black" size={24} />
         </div>
         <div
           className={`${isCollapsed ? "hidden" : "block"} ml-4 overflow-hidden whitespace-nowrap`}>

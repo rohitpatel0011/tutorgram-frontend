@@ -11,6 +11,8 @@ import {
   Shuffle,
   Code2,
   AlertTriangle,
+  RotateCcw,
+  Terminal,
 } from "lucide-react";
 import { generateTopicQuiz } from "../services/geminiService";
 import { QuizData } from "../types";
@@ -22,6 +24,120 @@ interface Props {
   previousScore?: number;
   onPass: (score: number) => void;
 }
+
+// Reuse Simple Syntax Highlight Logic
+const highlightLine = (line: string): React.ReactNode[] => {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let i = 0;
+  // Simplified Regex for Quiz snippets (Code is usually shorter)
+  const regex =
+    /(\/\/.*$|#.*$)|(".*?"|'.*?')|(\b\d+\b)|([a-zA-Z_]\w*)|([^\s\w])/g;
+
+  const KEYWORDS = new Set([
+    "const",
+    "let",
+    "var",
+    "function",
+    "return",
+    "if",
+    "else",
+    "for",
+    "while",
+    "int",
+    "void",
+    "float",
+    "char",
+    "include",
+    "printf",
+    "cout",
+    "cin",
+    "def",
+    "print",
+    "import",
+    "from",
+    "class",
+    "public",
+  ]);
+
+  let match;
+  while ((match = regex.exec(line)) !== null) {
+    if (match.index > lastIndex)
+      nodes.push(
+        <span key={i++} className="text-[#d4d4d4]">
+          {line.substring(lastIndex, match.index)}
+        </span>,
+      );
+    const [full, comment, str, num, word, symbol] = match;
+    if (comment)
+      nodes.push(
+        <span key={i++} className="text-[#6A9955] italic">
+          {comment}
+        </span>,
+      );
+    else if (str)
+      nodes.push(
+        <span key={i++} className="text-[#CE9178]">
+          {str}
+        </span>,
+      );
+    else if (num)
+      nodes.push(
+        <span key={i++} className="text-[#B5CEA8]">
+          {num}
+        </span>,
+      );
+    else if (word) {
+      if (KEYWORDS.has(word))
+        nodes.push(
+          <span key={i++} className="text-[#C586C0] font-bold">
+            {word}
+          </span>,
+        );
+      else
+        nodes.push(
+          <span key={i++} className="text-[#9CDCFE]">
+            {word}
+          </span>,
+        );
+    } else if (symbol)
+      nodes.push(
+        <span key={i++} className="text-[#d4d4d4]">
+          {symbol}
+        </span>,
+      );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < line.length)
+    nodes.push(
+      <span key={i++} className="text-[#d4d4d4]">
+        {line.substring(lastIndex)}
+      </span>,
+    );
+  return nodes;
+};
+
+const QuizCodeSnippet = ({ code }: { code: string }) => {
+  return (
+    <div className="my-3 rounded-lg border-2 border-black dark:border-zinc-700 overflow-hidden bg-[#1e1e1e] shadow-sm">
+      <div className="flex items-center px-3 py-1.5 bg-[#252526] border-b border-white/10">
+        <Terminal size={10} className="text-gray-400 mr-2" />
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          Snippet
+        </span>
+      </div>
+      <div className="p-3 overflow-x-auto custom-scrollbar">
+        <pre className="font-mono text-xs leading-relaxed text-[#d4d4d4]">
+          <code>
+            {code.split("\n").map((line, i) => (
+              <div key={i}>{highlightLine(line)}</div>
+            ))}
+          </code>
+        </pre>
+      </div>
+    </div>
+  );
+};
 
 const TopicQuiz: React.FC<Props> = ({
   topicTitle,
@@ -52,6 +168,14 @@ const TopicQuiz: React.FC<Props> = ({
     const data = await generateTopicQuiz(topicTitle, topicContent, bypassCache);
     setQuizData(data);
     setLoading(false);
+  };
+
+  const handleReset = () => {
+    setShowResult(false);
+    setScore(0);
+    setCurrentQIndex(0);
+    setSelectedOption(null);
+    setIsSubmitted(false);
   };
 
   const handleOptionSelect = (idx: number) => {
@@ -89,13 +213,7 @@ const TopicQuiz: React.FC<Props> = ({
     return parts.map((part, i) => {
       if (part.startsWith("```")) {
         const code = part.replace(/```[a-z]*\n?/, "").replace(/```$/, "");
-        return (
-          <pre
-            key={i}
-            className="my-3 p-3 bg-black text-acid-dark rounded-lg overflow-x-auto text-sm font-mono border-2 border-gray-800 shadow-inner">
-            <code>{code}</code>
-          </pre>
-        );
+        return <QuizCodeSnippet key={i} code={code} />;
       }
       return <span key={i}>{part}</span>;
     });
@@ -148,12 +266,20 @@ const TopicQuiz: React.FC<Props> = ({
             </button>
           )}
           {quizData && !showResult && (
-            <button
-              onClick={() => handleGenerate(true)} // Force regeneration
-              className="px-4 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-500 text-black dark:text-white font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-              title="Generate New Questions">
-              <Shuffle size={16} /> New Q's
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleReset}
+                className="px-4 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-500 text-black dark:text-white font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                title="Restart Quiz">
+                <RotateCcw size={16} /> Reset
+              </button>
+              <button
+                onClick={() => handleGenerate(true)} // Force regeneration
+                className="px-4 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-zinc-500 text-black dark:text-white font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                title="Generate New Questions">
+                <Shuffle size={16} /> Change MCQ
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -304,11 +430,18 @@ const TopicQuiz: React.FC<Props> = ({
               / 5 correct.
             </p>
 
-            <button
-              onClick={() => handleGenerate(true)} // Force new questions
-              className="px-8 py-3 bg-white dark:bg-black border-2 border-black dark:border-white text-black dark:text-white font-black rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-900 transition-all uppercase tracking-wider shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff]">
-              Try New Questions
-            </button>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleReset}
+                className="px-6 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white text-black dark:text-white font-black rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-900 transition-all uppercase tracking-wider shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#fff]">
+                Retry Quiz
+              </button>
+              <button
+                onClick={() => handleGenerate(true)} // Force new questions
+                className="px-6 py-3 bg-black dark:bg-acid border-2 border-black dark:border-acid text-white dark:text-black font-black rounded-lg hover:scale-105 transition-all uppercase tracking-wider shadow-[4px_4px_0px_0px_#888]">
+                New Questions
+              </button>
+            </div>
           </div>
         )}
       </div>

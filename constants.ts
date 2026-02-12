@@ -84,7 +84,7 @@ export const CONTENT_DATA: Category[] = [
     chapters: [
       {
         id: "cpp-green-basic",
-        title: "🟢 C++ Basic Topics",
+        title: " C++ Basic Topics",
         topics: [
           {
             id: "cpp-hello",
@@ -155,7 +155,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-yellow-core",
-        title: "🟡 Core C++ Topics",
+        title: " Core C++ Topics",
         topics: [
           {
             id: "cpp-pointers",
@@ -196,7 +196,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-blue-oop",
-        title: "🔵 OOP in C++",
+        title: " OOP in C++",
         topics: [
           {
             id: "cpp-class-struct",
@@ -252,7 +252,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-orange-stl",
-        title: "🟠 STL & Modern C++",
+        title: " STL & Modern C++",
         topics: [
           {
             id: "cpp-vector",
@@ -309,7 +309,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-red-advanced",
-        title: "🔴 Advanced C++",
+        title: " Advanced C++",
         topics: [
           {
             id: "cpp-templates",
@@ -355,7 +355,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-black-threads",
-        title: "⚫ Multithreading",
+        title: " Multithreading",
         topics: [
           {
             id: "cpp-thread",
@@ -386,7 +386,7 @@ export const CONTENT_DATA: Category[] = [
       },
       {
         id: "cpp-purple-expert",
-        title: "🟣 Expert / Optional",
+        title: "Expert / Optional",
         topics: [
           {
             id: "cpp-metaprog",
